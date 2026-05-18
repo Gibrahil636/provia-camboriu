@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ProVIA — Pré-teste</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #111; color: #fff;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; padding: 24px;
+    }
+    .card {
+      background: #1a1a1a; border-radius: 20px;
+      padding: 40px 32px; max-width: 380px; width: 100%;
+      text-align: center; border: 1px solid #2a2a2a;
+    }
+    .badge {
+      display: inline-block; background: #E8C94A; color: #111;
+      font-size: 10px; font-weight: 800; letter-spacing: 2px;
+      text-transform: uppercase; padding: 5px 14px;
+      border-radius: 20px; margin-bottom: 20px;
+    }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.5px; }
+    h1 span { color: #E8C94A; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 32px; line-height: 1.5; }
+    .state-loading { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid #333; border-top-color: #E8C94A;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 14px; color: #888; }
+    .state-ready { display: none; flex-direction: column; align-items: center; gap: 20px; }
+    .code-box {
+      background: #0a0a0a; border: 2px solid #E8C94A;
+      border-radius: 12px; padding: 16px 24px;
+    }
+    .code-label { font-size: 11px; color: #888; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+    .code-value {
+      font-size: 32px; font-weight: 800; color: #E8C94A;
+      letter-spacing: 6px; font-family: 'Courier New', monospace;
+    }
+    .info-text { font-size: 12px; color: #666; line-height: 1.6; max-width: 280px; }
+    .btn {
+      display: block; width: 100%; background: #E8C94A; color: #111;
+      font-size: 16px; font-weight: 800; padding: 16px;
+      border-radius: 12px; border: none; cursor: pointer;
+      text-decoration: none; transition: opacity 0.15s; letter-spacing: 0.3px;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:active { opacity: 0.8; transform: scale(0.98); }
+    .state-error { display: none; flex-direction: column; align-items: center; gap: 16px; }
+    .error-icon { font-size: 40px; }
+    .error-text { font-size: 13px; color: #f87171; line-height: 1.5; }
+    .footer { margin-top: 32px; font-size: 11px; color: #444; line-height: 1.6; text-align: center; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="badge">Pré-teste</div>
+  <h1>Pro<span>VIA</span></h1>
+  <p class="subtitle">Protocolo de Verificação de Imagens<br>Geradas por Inteligência Artificial</p>
+  <div class="state-loading" id="stateLoading">
+    <div class="spinner"></div>
+    <p class="loading-text">Preparando seu acesso…</p>
+  </div>
+  <div class="state-ready" id="stateReady">
+    <div class="code-box">
+      <p class="code-label">Seu código anônimo</p>
+      <p class="code-value" id="codeDisplay">——</p>
+    </div>
+    <p class="info-text">
+      Este código identifica você de forma anônima.<br>
+      Não é necessário anotá-lo — ele será gerado automaticamente quando você acessar o segundo formulário neste mesmo celular.
+    </p>
+    <a class="btn" id="btnStart" href="#">Iniciar o pré-teste →</a>
+  </div>
+  <div class="state-error" id="stateError">
+    <div class="error-icon">⚠️</div>
+    <p class="error-text" id="errorMsg">Ocorreu um erro. Tente reabrir o QR Code.</p>
+  </div>
+</div>
+<p class="footer">
+  EEB José Arantes · Camboriú/SC<br>
+  32.º Prêmio Jovem Cientista 2026 · CNPq / FRM
+</p>
+<script>
+const CONFIG = {
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbw7YIgv33tL-9YM_Mz3SyIuJm79jCwzDwtPywqmFo_cVNf6C7SAfDvav2dEu_kggFpr/exec",
+  FORM_BASE_URL:   "https://docs.google.com/forms/d/1PyHJ5enO7ZhXKN7CTPkzLPX6vEmddaKKt0mcfTQPGOI/viewform",
+  FORM_ENTRY_ID:   "entry.9156134",
+  ETAPA:           "pre-teste"
+};
+
+async function generateCode() {
+  const components = [
+    navigator.userAgent,
+    screen.width + "x" + screen.height,
+    screen.colorDepth,
+    navigator.language,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.hardwareConcurrency || "?",
+    navigator.maxTouchPoints || "0"
+  ].join("|");
+  const encoder = new TextEncoder();
+  const data = encoder.encode(components);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) code += chars[hashArray[i] % chars.length];
+  return code;
+}
+
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  if (/iPhone/.test(ua)) return "iPhone";
+  if (/iPad/.test(ua)) return "iPad";
+  if (/Android/.test(ua)) {
+    const m = ua.match(/Android.*?;\s*([^)]+)\)/);
+    return m ? m[1].trim().substring(0, 30) : "Android";
+  }
+  return "Desktop";
+}
+
+async function logToSheet(code) {
+  try {
+    await fetch(CONFIG.APPS_SCRIPT_URL, {
+      method: "POST", mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code, etapa: CONFIG.ETAPA,
+        device: getDeviceInfo(),
+        timestamp: new Date().toISOString(),
+        ua: navigator.userAgent.substring(0, 100)
+      })
+    });
+  } catch(e) {}
+}
+
+async function init() {
+  try {
+    const code = await generateCode();
+    document.getElementById("codeDisplay").textContent = code;
+    const formUrl = CONFIG.FORM_BASE_URL + "?usp=pp_url&" + CONFIG.FORM_ENTRY_ID + "=" + encodeURIComponent(code);
+    document.getElementById("btnStart").href = formUrl;
+    logToSheet(code);
+    document.getElementById("stateLoading").style.display = "none";
+    document.getElementById("stateReady").style.display = "flex";
+  } catch(e) {
+    document.getElementById("stateLoading").style.display = "none";
+    document.getElementById("stateError").style.display = "flex";
+    document.getElementById("errorMsg").textContent = "Erro: " + e.message;
+  }
+}
+
+setTimeout(init, 600);
+</script>
+</body>
+</html>
