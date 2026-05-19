@@ -37,18 +37,18 @@
         device = m ? m[1].trim().substring(0, 30) : "Android";
       }
 
-      // sendBeacon garante o envio mesmo durante redirecionamento
-      const payload = new Blob([JSON.stringify({
-        code, etapa: ETAPA, device,
-        timestamp: new Date().toISOString(),
-        ua: ua.substring(0, 100)
-      })], { type: "application/json" });
+      // Pixel tracking GET — nunca é cancelado pelo navegador
+      const params = new URLSearchParams({
+        code, etapa: ETAPA, device, ua: ua.substring(0, 100)
+      });
+      new Image().src = APPS_SCRIPT_URL + "?" + params.toString();
 
-      navigator.sendBeacon(APPS_SCRIPT_URL, payload);
-
-      window.location.replace(
-        FORM_BASE_URL + "?usp=pp_url&" + FORM_ENTRY_ID + "=" + encodeURIComponent(code)
-      );
+      // Redireciona para o Forms
+      setTimeout(() => {
+        window.location.replace(
+          FORM_BASE_URL + "?usp=pp_url&" + FORM_ENTRY_ID + "=" + encodeURIComponent(code)
+        );
+      }, 300);
     }
 
     run();
