@@ -6,52 +6,55 @@
   <title>ProVIA</title>
 </head>
 <body>
-  <script>
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7YIgv33tL-9YM_Mz3SyIuJm79jCwzDwtPywqmFo_cVNf6C7SAfDvav2dEu_kggFpr/exec";
-    const FORM_BASE_URL   = "https://docs.google.com/forms/d/1PyHJ5enO7ZhXKN7CTPkzLPX6vEmddaKKt0mcfTQPGOI/viewform";
-    const FORM_ENTRY_ID   = "entry.9156134";
-    const ETAPA           = "pre-teste";
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw7YIgv33tL-9YM_Mz3SyIuJm79jCwzDwtPywqmFo_cVNf6C7SAfDvav2dEu_kggFpr/exec";
+const FORM_BASE_URL   = "https://docs.google.com/forms/d/1PyHJ5enO7ZhXKN7CTPkzLPX6vEmddaKKt0mcfTQPGOI/viewform";
+const FORM_ENTRY_ID   = "entry.9156134";
+const ETAPA           = "pre-teste";
 
-    async function run() {
-      const raw = [
-        navigator.userAgent,
-        screen.width + "x" + screen.height,
-        screen.colorDepth,
-        navigator.language,
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
-        navigator.hardwareConcurrency || "?",
-        navigator.maxTouchPoints || "0"
-      ].join("|");
+async function run() {
+  const raw = [
+    navigator.userAgent,
+    screen.width + "x" + screen.height,
+    screen.colorDepth,
+    navigator.language,
+    Intl.DateTimeFormat().resolvedOptions().timeZone,
+    navigator.hardwareConcurrency || "?",
+    navigator.maxTouchPoints || "0"
+  ].join("|");
 
-      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
-      const arr = Array.from(new Uint8Array(buf));
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      const code = Array.from({length: 6}, (_, i) => chars[arr[i] % chars.length]).join("");
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  const arr = Array.from(new Uint8Array(buf));
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const code = Array.from({length: 6}, (_, i) => chars[arr[i] % chars.length]).join("");
 
-      const ua = navigator.userAgent;
-      let device = "Desktop";
-      if (/iPhone/.test(ua)) device = "iPhone";
-      else if (/iPad/.test(ua)) device = "iPad";
-      else if (/Android/.test(ua)) {
-        const m = ua.match(/Android.*?;\s*([^)]+)\)/);
-        device = m ? m[1].trim().substring(0, 30) : "Android";
-      }
+  const ua = navigator.userAgent;
+  let device = "Desktop";
+  if (/iPhone/.test(ua)) device = "iPhone";
+  else if (/iPad/.test(ua)) device = "iPad";
+  else if (/Android/.test(ua)) {
+    const m = ua.match(/Android.*?;\s*([^)]+)\)/);
+    device = m ? m[1].trim().substring(0, 30) : "Android";
+  }
 
-      // Pixel tracking GET — nunca é cancelado pelo navegador
-      const params = new URLSearchParams({
-        code, etapa: ETAPA, device, ua: ua.substring(0, 100)
-      });
-      new Image().src = APPS_SCRIPT_URL + "?" + params.toString();
+  const formUrl = FORM_BASE_URL + "?usp=pp_url&" + FORM_ENTRY_ID + "=" + encodeURIComponent(code);
 
-      // Redireciona para o Forms
-      setTimeout(() => {
-        window.location.replace(
-          FORM_BASE_URL + "?usp=pp_url&" + FORM_ENTRY_ID + "=" + encodeURIComponent(code)
-        );
-      }, 300);
-    }
+  // Envia registro e aguarda resposta antes de redirecionar
+  try {
+    await Promise.race([
+      fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ code, etapa: ETAPA, device, ua: ua.substring(0, 100) })
+      }),
+      new Promise(resolve => setTimeout(resolve, 1500))
+    ]);
+  } catch(e) {}
 
-    run();
-  </script>
+  window.location.replace(formUrl);
+}
+
+run();
+</script>
 </body>
 </html>
