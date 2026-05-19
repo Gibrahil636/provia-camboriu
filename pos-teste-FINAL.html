@@ -13,19 +13,43 @@
     const ETAPA           = "pos-teste";
 
     async function run() {
-      const raw = [navigator.userAgent, screen.width+"x"+screen.height, screen.colorDepth, navigator.language, Intl.DateTimeFormat().resolvedOptions().timeZone, navigator.hardwareConcurrency||"?", navigator.maxTouchPoints||"0"].join("|");
+      const raw = [
+        navigator.userAgent,
+        screen.width + "x" + screen.height,
+        screen.colorDepth,
+        navigator.language,
+        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        navigator.hardwareConcurrency || "?",
+        navigator.maxTouchPoints || "0"
+      ].join("|");
+
       const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
       const arr = Array.from(new Uint8Array(buf));
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      const code = Array.from({length:6},(_,i)=>chars[arr[i]%chars.length]).join("");
+      const code = Array.from({length: 6}, (_, i) => chars[arr[i] % chars.length]).join("");
+
       const ua = navigator.userAgent;
       let device = "Desktop";
-      if(/iPhone/.test(ua)) device="iPhone";
-      else if(/iPad/.test(ua)) device="iPad";
-      else if(/Android/.test(ua)){const m=ua.match(/Android.*?;\s*([^)]+)\)/);device=m?m[1].trim().substring(0,30):"Android";}
-      fetch(APPS_SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify({code,etapa:ETAPA,device,timestamp:new Date().toISOString(),ua:ua.substring(0,100)})}).catch(()=>{});
-      window.location.replace(FORM_BASE_URL+"?usp=pp_url&"+FORM_ENTRY_ID+"="+encodeURIComponent(code));
+      if (/iPhone/.test(ua)) device = "iPhone";
+      else if (/iPad/.test(ua)) device = "iPad";
+      else if (/Android/.test(ua)) {
+        const m = ua.match(/Android.*?;\s*([^)]+)\)/);
+        device = m ? m[1].trim().substring(0, 30) : "Android";
+      }
+
+      const payload = new Blob([JSON.stringify({
+        code, etapa: ETAPA, device,
+        timestamp: new Date().toISOString(),
+        ua: ua.substring(0, 100)
+      })], { type: "application/json" });
+
+      navigator.sendBeacon(APPS_SCRIPT_URL, payload);
+
+      window.location.replace(
+        FORM_BASE_URL + "?usp=pp_url&" + FORM_ENTRY_ID + "=" + encodeURIComponent(code)
+      );
     }
+
     run();
   </script>
 </body>
